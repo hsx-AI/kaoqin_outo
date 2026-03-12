@@ -1,0 +1,41 @@
+2026-03-12 09:49:22 INFO auto_report HTTP服务已启动: http://0.0.0.0:8000
+2026-03-12 09:50:03 INFO auto_report HTTP "GET /health HTTP/1.1" 200 -
+2026-03-12 09:54:53 INFO auto_report 客户端已启动，窗口句柄: 1183054
+2026-03-12 09:55:01 INFO auto_report 登录操作执行完成
+2026-03-12 09:55:01 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 09:55:02 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 09:55:02 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 09:55:32 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 09:55:37 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 09:55:38 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_095538_592994_1.xlsx
+2026-03-12 09:55:38 INFO auto_report 共保存 1 个工作簿
+2026-03-12 09:55:38 INFO auto_report Excel报表保存成功
+2026-03-12 09:55:39 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 09:55:39 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 09:55:39 INFO auto_report HTTP "GET /run HTTP/1.1" 200 -
+2026-03-12 09:55:39 ERROR auto_report HTTP任务执行失败: 'latin-1' codec can't encode characters in position 43-45: ordinal not in range(256)
+2026-03-12 09:55:39 INFO auto_report HTTP "GET /run HTTP/1.1" 500 -
+2026-03-12 09:55:39 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 09:59:24 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 09:59:25 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 09:59:25 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 09:59:26 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 09:59:26 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 09:59:27 INFO auto_report HTTP "GET /health HTTP/1.1" 200 -
+2026-03-12 10:04:32 INFO auto_report HTTP "GET /health HTTP/1.1" 200 -
+2026-03-12 10:04:32 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 10:04:42 INFO auto_report 客户端已启动，窗口句柄: 1575546
+2026-03-12 10:04:51 INFO auto_report 登录操作执行完成
+2026-03-12 10:04:51 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 10:04:52 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 10:04:52 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 10:05:27 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 10:05:28 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_100528_1249370_1.xlsx
+2026-03-12 10:05:28 INFO auto_report 共保存 1 个工作簿
+2026-03-12 10:05:28 INFO auto_report Excel报表保存成功
+2026-03-12 10:05:28 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 10:05:29 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 10:05:29 INFO auto_report HTTP "GET /run HTTP/1.1" 200 -
+2026-03-12 10:05:29 ERROR auto_report HTTP任务执行失败: 'latin-1' codec can't encode characters in position 43-45: ordinal not in range(256)
+2026-03-12 10:05:29 INFO auto_report HTTP "GET /run HTTP/1.1" 500 -
+2026-03-12 10:05:29 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -

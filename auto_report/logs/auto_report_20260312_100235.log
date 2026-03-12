@@ -1,0 +1,2 @@
+2026-03-12 10:02:35 INFO auto_report HTTP服务已启动: http://127.0.0.1:8765
+2026-03-12 10:02:45 INFO auto_report HTTP "GET /health HTTP/1.1" 200 -

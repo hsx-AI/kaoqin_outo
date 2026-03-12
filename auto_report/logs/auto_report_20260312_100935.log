@@ -1,0 +1,23 @@
+2026-03-12 10:09:36 INFO auto_report HTTP服务已启动: http://0.0.0.0:8000
+2026-03-12 10:09:48 INFO auto_report 客户端已启动，窗口句柄: 1708038
+2026-03-12 10:09:56 INFO auto_report 登录操作执行完成
+2026-03-12 10:09:56 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 10:09:57 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 10:09:57 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 10:09:57 ERROR auto_report 数据查询与导出流程失败
+2026-03-12 10:09:58 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 10:09:58 WARNING auto_report 未关闭进程或进程不存在: EXCEL
+2026-03-12 10:09:58 INFO auto_report HTTP "GET /run HTTP/1.1" 500 -
+2026-03-12 10:09:58 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 10:10:06 INFO auto_report 客户端已启动，窗口句柄: 3148018
+2026-03-12 10:10:14 INFO auto_report 登录操作执行完成
+2026-03-12 10:10:14 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 10:10:15 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 10:10:15 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 10:10:54 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 10:10:55 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_101054_3146238_1.xlsx
+2026-03-12 10:10:55 INFO auto_report 共保存 1 个工作簿
+2026-03-12 10:10:55 INFO auto_report Excel报表保存成功
+2026-03-12 10:10:55 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 10:10:55 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 10:10:55 INFO auto_report HTTP "GET /run HTTP/1.1" 200 -
