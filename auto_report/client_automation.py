@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import ctypes
+import logging
 import subprocess
 import time
 from pathlib import Path
@@ -13,12 +15,17 @@ from pywinauto import Desktop
 from pywinauto.findwindows import ElementNotFoundError
 import re
 
+logger = logging.getLogger("auto_report")
+
+
 @dataclass
 class ClientAutomation:
     executable_path: str | None = None
     pid: int | None = None
     hwnd: int | None = None
     process: subprocess.Popen | None = None
+
+    # ── 辅助方法 ──────────────────────────────────────────────────────────
 
     def _find_visible_window_for_pid(self, pid: int) -> int | None:
         found_hwnd: int | None = None
@@ -41,6 +48,66 @@ class ClientAutomation:
 
         win32gui.EnumWindows(on_window, 0)
         return found_hwnd
+
+    def _force_foreground_window(self, hwnd: int) -> bool:
+        """通过 AttachThreadInput 技巧可靠地将窗口置前，解决 SetForegroundWindow 静默失败"""
+        try:
+            foreground_hwnd = win32gui.GetForegroundWindow()
+            if foreground_hwnd == hwnd:
+                return True
+
+            current_thread = ctypes.windll.kernel32.GetCurrentThreadId()
+            foreground_thread = ctypes.windll.user32.GetWindowThreadProcessId(
+                foreground_hwnd, None
+            )
+
+            attached = False
+            if current_thread != foreground_thread and foreground_thread != 0:
+                attached = bool(
+                    ctypes.windll.user32.AttachThreadInput(
+                        foreground_thread, current_thread, True
+                    )
+                )
+
+            try:
+                if win32gui.IsIconic(hwnd):
+                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                win32gui.BringWindowToTop(hwnd)
+                win32gui.SetForegroundWindow(hwnd)
+            finally:
+                if attached:
+                    ctypes.windll.user32.AttachThreadInput(
+                        foreground_thread, current_thread, False
+                    )
+
+            time.sleep(0.3)
+            return win32gui.GetForegroundWindow() == hwnd
+        except Exception:
+            try:
+                if win32gui.IsIconic(hwnd):
+                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                win32gui.SetForegroundWindow(hwnd)
+                time.sleep(0.3)
+                return True
+            except Exception:
+                return False
+
+    def _is_process_responsive(self, hwnd: int | None = None) -> bool:
+        """检查窗口/进程是否正在响应（非挂起）"""
+        target = hwnd or self.hwnd
+        if not target:
+            return True
+        try:
+            hung = ctypes.windll.user32.IsHungAppWindow(int(target))
+            return not bool(hung)
+        except Exception:
+            return True
+
+    def _check_responsive_or_raise(self, context: str = ""):
+        """如果进程未响应则抛出 RuntimeError，用于中断潜在的死循环"""
+        if self.hwnd and not self._is_process_responsive(self.hwnd):
+            msg = f"程序未响应: {context}" if context else "程序未响应"
+            raise RuntimeError(msg)
 
     def _find_child_by_text(self, parent_hwnd: int, target_text: str, fuzzy: bool = False) -> int | None:
         target = target_text.strip()
@@ -113,6 +180,7 @@ class ClientAutomation:
     def _focus_export_confirm_dialog(self, main_window_title: str, timeout_seconds: float = 8.0) -> bool:
         deadline = time.time() + float(timeout_seconds)
         while time.time() < deadline:
+            self._check_responsive_or_raise("等待导出确认弹窗")
             try:
                 windows = Desktop(backend="uia").windows(process=self.pid, visible_only=True)
             except Exception:
@@ -154,6 +222,8 @@ class ClientAutomation:
             time.sleep(0.2)
         return False
 
+    # ── 启动 / 关闭 ──────────────────────────────────────────────────────
+
     def launch(self, timeout_seconds: float = 20.0) -> int:
         if not self.executable_path:
             raise ValueError("executable_path is required")
@@ -182,9 +252,7 @@ class ClientAutomation:
             try:
                 result = subprocess.run(
                     ["taskkill", "/F", "/PID", str(int(self.pid)), "/T"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
+                    capture_output=True, text=True, check=False,
                 )
                 if result.returncode == 0:
                     return True
@@ -216,9 +284,7 @@ class ClientAutomation:
             try:
                 result = subprocess.run(
                     ["taskkill", "/F", "/IM", name, "/T"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
+                    capture_output=True, text=True, check=False,
                 )
                 if result.returncode == 0:
                     closed = True
@@ -239,9 +305,7 @@ class ClientAutomation:
             try:
                 result = subprocess.run(
                     ["taskkill", "/F", "/IM", name, "/T"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
+                    capture_output=True, text=True, check=False,
                 )
                 if result.returncode == 0:
                     return True
@@ -250,45 +314,40 @@ class ClientAutomation:
         return False
 
     def _set_clipboard_text(self, text: str) -> None:
-        """Helper to set text to clipboard for unicode support"""
         try:
             win32clipboard.OpenClipboard()
             win32clipboard.EmptyClipboard()
             win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
             win32clipboard.CloseClipboard()
         except Exception:
-            # Try to close if something went wrong
             try:
                 win32clipboard.CloseClipboard()
             except Exception:
                 pass
             raise
 
-    def login(self, username: str, password: str, timeout_seconds: float = 10.0) -> bool:
+    # ── 登录（带重试 + 焦点验证）────────────────────────────────────────
+
+    def login(self, username: str, password: str, timeout_seconds: float = 10.0,
+             max_input_retries: int = 3) -> bool:
         """
-        查找标题包含“登录”的窗口，并尝试输入用户名密码
-        注意：这里假设登录窗口属于当前启动的进程
+        查找标题包含[登录]的窗口并输入凭据。
+        使用 _force_foreground_window 确保焦点，失败自动重试。
         """
         if not self.pid:
             raise RuntimeError("Process not launched")
 
-        # 1. 寻找登录窗口
         login_hwnd: int | None = None
         deadline = time.time() + float(timeout_seconds)
 
         def on_window(hwnd: int, _lparam: int) -> bool:
             nonlocal login_hwnd
             try:
-                # 检查进程ID
                 _, window_pid = win32process.GetWindowThreadProcessId(hwnd)
                 if int(window_pid) != int(self.pid):
                     return True
-                
-                # 检查可见性
                 if not win32gui.IsWindowVisible(hwnd):
                     return True
-                
-                # 检查标题
                 title = win32gui.GetWindowText(hwnd)
                 if "登录" in title or "Login" in title:
                     login_hwnd = hwnd
@@ -304,53 +363,76 @@ class ClientAutomation:
             time.sleep(0.5)
 
         if not login_hwnd:
-            # 如果没找到特定标题的窗口，尝试使用主窗口（可能就是主窗口登录）
             if self.hwnd and win32gui.IsWindowVisible(self.hwnd):
                 login_hwnd = self.hwnd
             else:
                 return False
 
-        # 增加等待时间，确保页面加载完成
         time.sleep(5.0)
 
-        # 2. 激活窗口并输入
-        try:
-            # 尝试将窗口前置
-            if win32gui.IsIconic(login_hwnd):
-                win32gui.ShowWindow(login_hwnd, 9)  # SW_RESTORE
-            win32gui.SetForegroundWindow(login_hwnd)
-            time.sleep(0.5)
+        for attempt in range(max_input_retries):
+            try:
+                logger.info("登录输入第 %d/%d 次尝试", attempt + 1, max_input_retries)
 
-            shell = win32com.client.Dispatch("WScript.Shell")
-            
-            # 输入用户名
-            # 先清除可能存在的默认值 (Ctrl+A -> Del)
-            shell.SendKeys("^a")
-            time.sleep(0.1)
-            shell.SendKeys("{DELETE}")
-            time.sleep(0.1)
-            
-            # 使用剪贴板输入中文用户名
-            self._set_clipboard_text(username)
-            time.sleep(0.2)
-            shell.SendKeys("^v")
-            time.sleep(0.2)
-            
-            # 切换到密码框
-            shell.SendKeys("{TAB}")
-            time.sleep(0.2)
-            
-            # 输入密码
-            shell.SendKeys(password)
-            time.sleep(0.2)
-            
-            # 提交
-            shell.SendKeys("{ENTER}")
-            time.sleep(1.0)
-            
-            return True
-        except Exception:
-            return False
+                if not self._force_foreground_window(login_hwnd):
+                    logger.warning("无法将登录窗口置前，等待后重试")
+                    time.sleep(1.0)
+                    continue
+
+                shell = win32com.client.Dispatch("WScript.Shell")
+
+                shell.SendKeys("^a")
+                time.sleep(0.3)
+                shell.SendKeys("{DELETE}")
+                time.sleep(0.3)
+
+                self._set_clipboard_text(username)
+                time.sleep(0.3)
+
+                # 粘贴前再次验证焦点
+                if win32gui.GetForegroundWindow() != login_hwnd:
+                    logger.warning("粘贴前焦点丢失，重新激活窗口")
+                    if not self._force_foreground_window(login_hwnd):
+                        time.sleep(1.0)
+                        continue
+
+                shell.SendKeys("^v")
+                time.sleep(0.5)
+
+                # 验证剪贴板未被其他程序篡改
+                try:
+                    win32clipboard.OpenClipboard()
+                    clip_text = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+                    win32clipboard.CloseClipboard()
+                    if clip_text != username:
+                        logger.warning("剪贴板内容被篡改，重试")
+                        time.sleep(0.5)
+                        continue
+                except Exception:
+                    try:
+                        win32clipboard.CloseClipboard()
+                    except Exception:
+                        pass
+
+                shell.SendKeys("{TAB}")
+                time.sleep(0.3)
+
+                shell.SendKeys(password)
+                time.sleep(0.3)
+
+                shell.SendKeys("{ENTER}")
+                time.sleep(1.0)
+
+                return True
+            except Exception as e:
+                logger.warning("登录输入第 %d 次失败: %s", attempt + 1, e)
+                if attempt < max_input_retries - 1:
+                    time.sleep(1.0)
+                continue
+
+        return False
+
+    # ── 调试 ──────────────────────────────────────────────────────────────
 
     def _dump_debug_info(self, backend: str, filename: str):
         try:
@@ -373,37 +455,25 @@ class ClientAutomation:
             with open(filename, "a", encoding="utf-8") as f:
                 f.write(f"Error dumping UI: {e}\n")
 
+    # ── 原始数据查询（带响应性检测）──────────────────────────────────────
+
     def query_original_data(self, timeout_seconds: float = 10.0) -> bool:
-        """
-        查找并点击“原始数据查询”按钮
-        由于是.NET WinForms程序，使用uia backend
-        """
+        """查找并点击[原始数据查询]按钮，每轮循环检测程序是否挂起"""
         if not self.pid:
             raise RuntimeError("Process not launched")
 
-        # 定义尝试点击的逻辑
         def try_click_with_backend(backend: str) -> bool:
             try:
-                # WinForms程序通常需要uia backend
                 app = Application(backend=backend).connect(process=self.pid)
-                
-                # 获取主窗口
-                # 根据dump结果，窗口类名是WindowsForms10.Window.8.app...
-                # 我们可以尝试匹配标题
                 windows = app.windows(title_re=".*先达考勤管理系统.*")
-                
+
                 for window in windows:
-                    # 将窗口前置
                     try:
                         window.set_focus()
                     except Exception:
                         pass
 
-                    # 策略1：查找ToolStrip1中的按钮
-                    # 结构显示有 'ToolStrip1'
                     try:
-                        # 在UIA模式下，ToolStrip通常包含Button子元素
-                        # 查找所有名为"原始数据查询"的元素
                         btns = window.descendants(title="原始数据查询", control_type="Button")
                         for btn in btns:
                             try:
@@ -411,8 +481,7 @@ class ClientAutomation:
                                 return True
                             except Exception:
                                 pass
-                        
-                        # 如果上面的没找到，尝试模糊匹配
+
                         btns = window.descendants(title_re=".*原始数据查询.*", control_type="Button")
                         for btn in btns:
                             try:
@@ -423,78 +492,76 @@ class ClientAutomation:
                     except Exception:
                         pass
 
-                    # 策略2：通过菜单点击 "数据查询" -> "原始数据查询"
-                    # 结构显示有 'MenuStrip1'
                     try:
-                        # 查找菜单项
                         menu_item = window.descendants(title="数据查询", control_type="MenuItem")
                         if menu_item:
                             menu_item[0].click_input()
                             time.sleep(0.5)
-                            # 查找子菜单
                             sub_item = window.descendants(title="原始数据查询", control_type="MenuItem")
                             if sub_item:
                                 sub_item[0].click_input()
                                 return True
                     except Exception:
                         pass
-                        
+
                 return False
             except Exception:
                 return False
 
         deadline = time.time() + float(timeout_seconds)
         while time.time() < deadline:
-            # 根据Debug结果，这是WinForms程序，强烈建议使用uia
+            self._check_responsive_or_raise("查找原始数据查询按钮")
             if try_click_with_backend("uia"):
                 return True
-            
             time.sleep(1.0)
-            
-        # 如果超时仍未找到，导出UI结构用于调试
-        print("未找到按钮，正在导出UI结构到 ui_dump_uia.txt ...")
+
+        logger.warning("未找到按钮，正在导出UI结构到 ui_dump_uia.txt ...")
         self._dump_debug_info("uia", "ui_dump_uia.txt")
-        
         return False
 
-    def perform_query_and_export(self) -> bool:
+    # ── 查询导出（带全局超时 + 响应性检测）────────────────────────────────
+
+    def perform_query_and_export(self, timeout_seconds: float = 120.0) -> bool:
         """
-        执行查询并导出数据流程：
-        1. 点击“查询”按钮
-        2. 在弹出的查询窗口中点击“确定”
-        3. 等待10秒加载
-        4. 点击“结果导出”
-        5. 在确认弹窗中点击“是”
-        6. 等待20秒导出
+        执行查询并导出流程。全局超时保护，每步检测进程是否挂起。
+        超时或进程挂起时抛出 RuntimeError 而不是静默死循环。
         """
+        deadline = time.time() + float(timeout_seconds)
+
+        def check_deadline(step: str):
+            if time.time() > deadline:
+                raise RuntimeError(f"操作超时 ({timeout_seconds}s): {step}")
+
         try:
+            self._check_responsive_or_raise("连接应用")
+            check_deadline("连接应用")
             app = Application(backend="uia").connect(process=self.pid)
-            
-            # 1. 点击“查询”按钮 (在主界面)
-            print("正在查找主界面“查询”按钮...")
+
+            # 1. 点击[查询]按钮
+            logger.info("正在查找主界面[查询]按钮...")
             main_window = app.window(title_re=".*先达考勤管理系统.*")
             main_window.set_focus()
-            
-            # 查找主界面中的“查询”按钮 (注意：不是顶部工具栏的，是内容区域的)
+
             query_btn = main_window.descendants(title="查询", control_type="Button")
             if not query_btn:
-                print("未找到主界面“查询”按钮")
+                logger.error("未找到主界面[查询]按钮")
                 return False
-            
+
             query_btn[0].click_input()
-            print("点击主界面“查询”按钮")
+            logger.info("点击主界面[查询]按钮")
             time.sleep(5)
 
-            # 2. 在弹出的“查询”窗口中点击“确定”
-            print("正在等待“查询”窗口...")
-            # 使用 Desktop 查找该进程的所有窗口，这比 app.windows() 更可靠
+            # 2. 在弹出的查询窗口中点击[确定]
+            logger.info("正在等待[查询]窗口...")
             query_dialog = None
-            for i in range(10):  # 尝试10次，每次1.0秒
+            for i in range(10):
+                check_deadline("等待查询窗口")
+                self._check_responsive_or_raise("等待查询窗口")
                 try:
                     windows = Desktop(backend="uia").windows(process=self.pid, visible_only=True)
                     if i == 0:
-                        print(f"当前可见窗口: {[w.window_text() for w in windows]}")
-                        
+                        logger.info("当前可见窗口: %s", [w.window_text() for w in windows])
+
                     for w in windows:
                         if "查询" in w.window_text():
                             query_dialog = w
@@ -502,7 +569,7 @@ class ClientAutomation:
                     if query_dialog:
                         break
                 except Exception as e:
-                    print(f"查找窗口出错: {e}")
+                    logger.warning("查找窗口出错: %s", e)
                 time.sleep(1.0)
 
             if query_dialog:
@@ -511,35 +578,40 @@ class ClientAutomation:
                     confirm_btn = query_dialog.descendants(title="确定", control_type="Button")
                     if confirm_btn:
                         confirm_btn[0].click_input()
-                        print("点击查询窗口“确定”按钮")
+                        logger.info("点击查询窗口[确定]按钮")
                     else:
-                        print("未找到查询窗口“确定”按钮，尝试按回车键...")
+                        logger.info("未找到[确定]按钮，尝试按回车键...")
                         query_dialog.type_keys("{ENTER}")
                 except Exception as e:
-                    print(f"操作查询窗口失败: {e}，尝试按回车键...")
+                    logger.warning("操作查询窗口失败: %s，尝试按回车键...", e)
                     try:
                         query_dialog.type_keys("{ENTER}")
-                    except:
+                    except Exception:
                         pass
             else:
-                print("未找到查询窗口(超时)，尝试在主窗口按回车键...")
+                logger.warning("未找到查询窗口(超时)，尝试在主窗口按回车键...")
                 try:
                     main_window.type_keys("{ENTER}")
-                except:
+                except Exception:
                     pass
 
-            # 3. 等待5S等他加载完
-            print("等待5秒数据加载...")
-            time.sleep(5 )
+            # 3. 等待数据加载（分段等待，每段检查响应性）
+            logger.info("等待数据加载...")
+            for _ in range(5):
+                check_deadline("等待数据加载")
+                self._check_responsive_or_raise("等待数据加载")
+                time.sleep(1.0)
 
-            # 4. 点击“结果导出”
-            print("正在查找“结果导出”按钮...")
+            # 4. 点击[结果导出]
+            logger.info("正在查找[结果导出]按钮...")
+            check_deadline("查找结果导出")
+            self._check_responsive_or_raise("查找结果导出")
 
             main_wrapper = None
             try:
                 main_window = app.window(title_re=".*先达考勤.*")
                 if not main_window.exists(timeout=5):
-                    print("未找到主窗口，尝试重新连接应用...")
+                    logger.info("未找到主窗口，尝试重新连接应用...")
                     app = Application(backend="uia").connect(process=self.pid)
                     main_window = app.window(title_re=".*先达考勤.*")
 
@@ -553,11 +625,11 @@ class ClientAutomation:
                         self.hwnd = int(fallback_hwnd)
                 try:
                     main_wrapper.set_focus()
-                    print(f"已定位主窗口: {main_wrapper.window_text()}")
+                    logger.info("已定位主窗口: %s", main_wrapper.window_text())
                 except Exception as e:
-                    print(f"主窗口set_focus失败(忽略): {e}")
+                    logger.warning("主窗口set_focus失败(忽略): %s", e)
             except Exception as e:
-                print(f"重新查找主窗口失败: {e}")
+                logger.error("重新查找主窗口失败: %s", e)
                 return False
 
             parent_hwnd = int(self.hwnd) if self.hwnd else 0
@@ -568,20 +640,21 @@ class ClientAutomation:
                     self.hwnd = parent_hwnd
 
             if parent_hwnd <= 0:
-                print("未找到主窗口句柄，无法执行Win32相邻按钮点击")
+                logger.error("未找到主窗口句柄，无法执行Win32相邻按钮点击")
                 return False
 
             if not self._click_export_by_query_neighbor(parent_hwnd):
-                print("Win32相邻按钮点击未命中")
+                logger.error("Win32相邻按钮点击未命中")
                 return False
 
-            print("已执行Win32相邻按钮点击")
-            
-            # 5. 会有弹窗是否导出 点击是 (或回车)
-            print("等待3秒确认弹窗出现...")
+            logger.info("已执行Win32相邻按钮点击")
+
+            # 5. 导出确认弹窗
+            logger.info("等待确认弹窗出现...")
             time.sleep(3)
-            
-            print("正在确认导出(发送回车)...")
+            check_deadline("确认导出弹窗")
+
+            logger.info("正在确认导出(发送回车)...")
             try:
                 shell = win32com.client.Dispatch("WScript.Shell")
                 shell.SendKeys("{ENTER}")
@@ -590,15 +663,20 @@ class ClientAutomation:
                     main_window.type_keys("{ENTER}")
                 except Exception:
                     pass
-            
-            # 6. 等待导出完成
-            print("等待15秒导出完成...")
-            time.sleep(15)
-            
+
+            # 6. 等待导出完成（分段等待，每段检查响应性和超时）
+            logger.info("等待导出完成...")
+            for _ in range(15):
+                check_deadline("等待导出完成")
+                self._check_responsive_or_raise("等待导出完成")
+                time.sleep(1.0)
+
             return True
 
+        except RuntimeError:
+            raise
         except Exception as e:
-            print(f"执行查询导出流程失败: {e}")
+            logger.error("执行查询导出流程失败: %s", e)
             import traceback
             traceback.print_exc()
             return False

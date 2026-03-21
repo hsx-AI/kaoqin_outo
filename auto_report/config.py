@@ -10,5 +10,5 @@ class Config:
     username: str = "制造工艺部"
     password: str = "123456"
     http_token: str = "18400021209"
-    max_scan_retries: int = 2
-    scan_retry_sleep_seconds: float = 0.5
+    max_scan_retries: int = 5
+    scan_retry_sleep_seconds: float = 2.0

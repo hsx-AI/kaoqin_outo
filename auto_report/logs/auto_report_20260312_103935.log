@@ -1,0 +1,159 @@
+2026-03-12 10:39:36 INFO auto_report HTTP服务已启动: http://0.0.0.0:6648
+2026-03-12 10:40:23 INFO auto_report HTTP "GET /health?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 10:40:23 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 10:40:35 INFO auto_report 客户端已启动，窗口句柄: 3868836
+2026-03-12 10:40:44 INFO auto_report 登录操作执行完成
+2026-03-12 10:40:44 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 10:40:44 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 10:40:44 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 10:40:45 ERROR auto_report 数据查询与导出流程失败
+2026-03-12 10:40:45 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 10:40:46 WARNING auto_report 未关闭进程或进程不存在: EXCEL
+2026-03-12 10:40:46 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 500 -
+2026-03-12 10:40:46 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 10:44:46 INFO auto_report HTTP "GET /health?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 11:12:45 INFO auto_report HTTP "GET /health?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 11:12:46 INFO auto_report HTTP "GET /favicon.ico HTTP/1.1" 404 -
+2026-03-12 11:12:55 INFO auto_report 客户端已启动，窗口句柄: 459726
+2026-03-12 11:13:03 INFO auto_report 登录操作执行完成
+2026-03-12 11:13:03 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 11:13:04 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 11:13:04 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 11:13:39 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 11:13:40 WARNING auto_report 检测到Excel进程，但没有打开的工作簿
+2026-03-12 11:13:40 ERROR auto_report 未找到或保存任何Excel工作簿
+2026-03-12 11:13:40 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 11:13:40 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 11:13:40 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 500 -
+2026-03-12 11:14:26 INFO auto_report 客户端已启动，窗口句柄: 1706120
+2026-03-12 11:14:35 INFO auto_report 登录操作执行完成
+2026-03-12 11:14:35 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 11:14:36 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 11:14:36 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 11:15:11 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 11:15:12 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_111511_525294_1.xlsx
+2026-03-12 11:15:12 INFO auto_report 共保存 1 个工作簿
+2026-03-12 11:15:12 INFO auto_report Excel报表保存成功
+2026-03-12 11:15:12 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 11:15:12 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 11:15:12 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 11:15:28 INFO auto_report 客户端已启动，窗口句柄: 656082
+2026-03-12 11:15:36 INFO auto_report 登录操作执行完成
+2026-03-12 11:15:36 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 11:15:37 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 11:15:37 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 11:15:37 ERROR auto_report 数据查询与导出流程失败
+2026-03-12 11:15:38 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 11:15:38 WARNING auto_report 未关闭进程或进程不存在: EXCEL
+2026-03-12 11:15:38 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 500 -
+2026-03-12 11:15:47 INFO auto_report 客户端已启动，窗口句柄: 459800
+2026-03-12 11:15:55 INFO auto_report 登录操作执行完成
+2026-03-12 11:15:55 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 11:15:56 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 11:15:56 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 11:16:31 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 11:16:32 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_111631_1442792_1.xlsx
+2026-03-12 11:16:32 INFO auto_report 共保存 1 个工作簿
+2026-03-12 11:16:32 INFO auto_report Excel报表保存成功
+2026-03-12 11:16:32 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 11:16:32 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 11:16:32 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 11:27:40 INFO auto_report 客户端已启动，窗口句柄: 656414
+2026-03-12 11:27:49 INFO auto_report 登录操作执行完成
+2026-03-12 11:27:49 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 11:27:49 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 11:27:49 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 11:28:24 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 11:28:25 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_112825_721916_1.xlsx
+2026-03-12 11:28:25 INFO auto_report 共保存 1 个工作簿
+2026-03-12 11:28:25 INFO auto_report Excel报表保存成功
+2026-03-12 11:28:26 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 11:28:26 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 11:28:26 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 11:39:21 INFO auto_report 客户端已启动，窗口句柄: 787494
+2026-03-12 11:39:30 INFO auto_report 登录操作执行完成
+2026-03-12 11:39:30 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 11:39:31 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 11:39:31 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 11:40:05 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 11:40:06 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_114006_5640142_1.xlsx
+2026-03-12 11:40:06 INFO auto_report 共保存 1 个工作簿
+2026-03-12 11:40:06 INFO auto_report Excel报表保存成功
+2026-03-12 11:40:06 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 11:40:07 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 11:40:07 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 16:42:59 INFO auto_report 客户端已启动，窗口句柄: 20972522
+2026-03-12 16:43:08 INFO auto_report 登录操作执行完成
+2026-03-12 16:43:08 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 16:43:09 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 16:43:09 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 16:43:43 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 16:43:44 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_164344_15798308_1.xlsx
+2026-03-12 16:43:44 INFO auto_report 共保存 1 个工作簿
+2026-03-12 16:43:44 INFO auto_report Excel报表保存成功
+2026-03-12 16:43:44 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 16:43:45 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 16:43:45 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 16:45:21 INFO auto_report 客户端已启动，窗口句柄: 853068
+2026-03-12 16:45:30 INFO auto_report 登录操作执行完成
+2026-03-12 16:45:30 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 16:45:31 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 16:45:31 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 16:46:06 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 16:46:06 WARNING auto_report 检测到Excel进程，但没有打开的工作簿
+2026-03-12 16:46:06 ERROR auto_report 未找到或保存任何Excel工作簿
+2026-03-12 16:46:07 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 16:46:07 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 16:46:07 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 500 -
+2026-03-12 16:46:30 INFO auto_report 客户端已启动，窗口句柄: 1837198
+2026-03-12 16:46:39 INFO auto_report 登录操作执行完成
+2026-03-12 16:46:39 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 16:46:39 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 16:46:39 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 16:46:40 ERROR auto_report 数据查询与导出流程失败
+2026-03-12 16:46:40 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 16:46:40 WARNING auto_report 未关闭进程或进程不存在: EXCEL
+2026-03-12 16:46:40 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 500 -
+2026-03-12 16:46:46 INFO auto_report 客户端已启动，窗口句柄: 852984
+2026-03-12 16:46:55 INFO auto_report 登录操作执行完成
+2026-03-12 16:46:55 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 16:46:56 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 16:46:56 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 16:47:31 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 16:47:32 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_164731_18351054_1.xlsx
+2026-03-12 16:47:32 INFO auto_report 共保存 1 个工作簿
+2026-03-12 16:47:32 INFO auto_report Excel报表保存成功
+2026-03-12 16:47:32 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 16:47:32 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 16:47:32 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 16:47:55 INFO auto_report 客户端已启动，窗口句柄: 1049646
+2026-03-12 16:48:03 INFO auto_report 登录操作执行完成
+2026-03-12 16:48:03 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 16:48:04 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 16:48:04 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 16:48:38 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 16:48:39 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_164839_4458856_1.xlsx
+2026-03-12 16:48:39 INFO auto_report 共保存 1 个工作簿
+2026-03-12 16:48:39 INFO auto_report Excel报表保存成功
+2026-03-12 16:48:39 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 16:48:40 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 16:48:40 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 200 -
+2026-03-12 20:35:04 INFO auto_report 客户端已启动，窗口句柄: 7866416
+2026-03-12 20:35:13 INFO auto_report 登录操作执行完成
+2026-03-12 20:35:13 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-12 20:35:14 INFO auto_report 成功点击“原始数据查询”
+2026-03-12 20:35:14 INFO auto_report 开始执行查询和导出流程...
+2026-03-12 20:35:49 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-12 20:35:50 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260312_203550_1246282_1.xlsx
+2026-03-12 20:35:50 INFO auto_report 共保存 1 个工作簿
+2026-03-12 20:35:50 INFO auto_report Excel报表保存成功
+2026-03-12 20:35:50 INFO auto_report 已关闭进程: XDKQ_HEC
+2026-03-12 20:35:50 INFO auto_report 已关闭进程: EXCEL
+2026-03-12 20:35:50 INFO auto_report HTTP "GET /run?token=18400021209 HTTP/1.1" 200 -
+2026-03-13 09:50:02 INFO auto_report 客户端已启动，窗口句柄: 3213424
+2026-03-13 09:50:11 INFO auto_report 登录操作执行完成
+2026-03-13 09:50:11 INFO auto_report 正在查找并点击“原始数据查询”...
+2026-03-13 09:50:12 INFO auto_report 成功点击“原始数据查询”
+2026-03-13 09:50:12 INFO auto_report 开始执行查询和导出流程...
+2026-03-13 09:50:47 INFO auto_report 数据查询与导出流程完成，开始保存Excel报表...
+2026-03-13 09:51:37 INFO auto_report 保存成功: D:\auto_reports\工作簿1_20260313_095048_3147832_1.xlsx
