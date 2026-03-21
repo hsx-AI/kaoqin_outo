@@ -103,11 +103,35 @@ class ClientAutomation:
         except Exception:
             return True
 
-    def _check_responsive_or_raise(self, context: str = ""):
-        """如果进程未响应则抛出 RuntimeError，用于中断潜在的死循环"""
-        if self.hwnd and not self._is_process_responsive(self.hwnd):
-            msg = f"程序未响应: {context}" if context else "程序未响应"
-            raise RuntimeError(msg)
+    def _wait_for_responsive(self, context: str = "",
+                             hung_timeout: float = 60.0,
+                             poll_interval: float = 3.0) -> None:
+        """
+        等待进程恢复响应。短暂未响应（加载界面/数据）会被容忍，
+        只有持续未响应超过 hung_timeout 秒才抛出 RuntimeError。
+        """
+        if not self.hwnd:
+            return
+        if self._is_process_responsive(self.hwnd):
+            return
+
+        logger.warning("程序暂时未响应 (%s), 等待恢复 (最多%d秒)...",
+                       context, int(hung_timeout))
+        hung_deadline = time.time() + hung_timeout
+
+        while time.time() < hung_deadline:
+            time.sleep(poll_interval)
+            if self._is_process_responsive(self.hwnd):
+                logger.info("程序已恢复响应 (%s)", context)
+                return
+            remaining = int(hung_deadline - time.time())
+            if remaining > 0:
+                logger.warning("程序仍未响应 (%s), 剩余等待%d秒...",
+                               context, remaining)
+
+        raise RuntimeError(
+            f"程序持续未响应超过{int(hung_timeout)}秒: {context}"
+        )
 
     def _find_child_by_text(self, parent_hwnd: int, target_text: str, fuzzy: bool = False) -> int | None:
         target = target_text.strip()
@@ -180,7 +204,7 @@ class ClientAutomation:
     def _focus_export_confirm_dialog(self, main_window_title: str, timeout_seconds: float = 8.0) -> bool:
         deadline = time.time() + float(timeout_seconds)
         while time.time() < deadline:
-            self._check_responsive_or_raise("等待导出确认弹窗")
+            self._wait_for_responsive("等待导出确认弹窗")
             try:
                 windows = Desktop(backend="uia").windows(process=self.pid, visible_only=True)
             except Exception:
@@ -510,7 +534,7 @@ class ClientAutomation:
 
         deadline = time.time() + float(timeout_seconds)
         while time.time() < deadline:
-            self._check_responsive_or_raise("查找原始数据查询按钮")
+            self._wait_for_responsive("查找原始数据查询按钮")
             if try_click_with_backend("uia"):
                 return True
             time.sleep(1.0)
@@ -521,7 +545,7 @@ class ClientAutomation:
 
     # ── 查询导出（带全局超时 + 响应性检测）────────────────────────────────
 
-    def perform_query_and_export(self, timeout_seconds: float = 120.0) -> bool:
+    def perform_query_and_export(self, timeout_seconds: float = 300.0) -> bool:
         """
         执行查询并导出流程。全局超时保护，每步检测进程是否挂起。
         超时或进程挂起时抛出 RuntimeError 而不是静默死循环。
@@ -533,7 +557,7 @@ class ClientAutomation:
                 raise RuntimeError(f"操作超时 ({timeout_seconds}s): {step}")
 
         try:
-            self._check_responsive_or_raise("连接应用")
+            self._wait_for_responsive("连接应用")
             check_deadline("连接应用")
             app = Application(backend="uia").connect(process=self.pid)
 
@@ -556,7 +580,7 @@ class ClientAutomation:
             query_dialog = None
             for i in range(10):
                 check_deadline("等待查询窗口")
-                self._check_responsive_or_raise("等待查询窗口")
+                self._wait_for_responsive("等待查询窗口")
                 try:
                     windows = Desktop(backend="uia").windows(process=self.pid, visible_only=True)
                     if i == 0:
@@ -599,13 +623,13 @@ class ClientAutomation:
             logger.info("等待数据加载...")
             for _ in range(5):
                 check_deadline("等待数据加载")
-                self._check_responsive_or_raise("等待数据加载")
+                self._wait_for_responsive("等待数据加载")
                 time.sleep(1.0)
 
             # 4. 点击[结果导出]
             logger.info("正在查找[结果导出]按钮...")
             check_deadline("查找结果导出")
-            self._check_responsive_or_raise("查找结果导出")
+            self._wait_for_responsive("查找结果导出")
 
             main_wrapper = None
             try:
@@ -668,7 +692,7 @@ class ClientAutomation:
             logger.info("等待导出完成...")
             for _ in range(15):
                 check_deadline("等待导出完成")
-                self._check_responsive_or_raise("等待导出完成")
+                self._wait_for_responsive("等待导出完成")
                 time.sleep(1.0)
 
             return True

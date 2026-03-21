@@ -32,7 +32,7 @@ def run_report_job(
     launch_client: bool = True,
     save_excel_when_no_launch: bool = False,
     logger=None,
-    global_timeout_seconds: float = 180.0,
+    global_timeout_seconds: float = 600.0,
 ) -> tuple[int, list[Path]]:
     config = Config()
     active_logger = setup_logging(config.log_dir) if logger is None else logger
