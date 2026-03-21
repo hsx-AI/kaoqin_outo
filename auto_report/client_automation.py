@@ -621,7 +621,7 @@ class ClientAutomation:
 
             # 3. 等待数据加载（分段等待，每段检查响应性）
             logger.info("等待数据加载...")
-            for _ in range(5):
+            for _ in range(7):
                 check_deadline("等待数据加载")
                 self._wait_for_responsive("等待数据加载")
                 time.sleep(1.0)
