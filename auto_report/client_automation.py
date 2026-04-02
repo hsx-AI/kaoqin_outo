@@ -564,6 +564,20 @@ class ClientAutomation:
             except Exception:
                 break
 
+    def _collect_child_classes(self, parent_hwnd: int, classes: set) -> None:
+        """调试用：递归收集 parent_hwnd 下所有子窗口的类名"""
+        child = win32gui.FindWindowEx(parent_hwnd, 0, None, None)
+        while child:
+            try:
+                classes.add(win32gui.GetClassName(child))
+                self._collect_child_classes(child, classes)
+            except Exception:
+                pass
+            try:
+                child = win32gui.FindWindowEx(parent_hwnd, child, None, None)
+            except Exception:
+                break
+
     def _fill_query_dates(self, query_dialog) -> bool:
         """在查询窗口中填入本月的起始和结束日期（如 2026-04-01 至 2026-04-30）"""
         now = datetime.now()
@@ -573,31 +587,37 @@ class ClientAutomation:
         logger.info("设置查询日期范围: %d-%02d-01 至 %d-%02d-%02d",
                      year, month, year, month, last_day)
 
-        # 从 UIA 对象直接获取查询窗口句柄（避免按标题搜索误匹配主窗口）
-        dialog_hwnd = 0
-        try:
-            dialog_hwnd = int(getattr(query_dialog, 'handle', 0) or 0)
-        except Exception:
-            pass
-        if dialog_hwnd <= 0:
+        # 枚举进程的所有顶层窗口（弹出的查询对话框是独立的 owned window）
+        top_hwnds: list[int] = []
+
+        def enum_top(hwnd, _):
             try:
-                dialog_hwnd = int(getattr(query_dialog.element_info, 'handle', 0) or 0)
+                if win32gui.IsWindowVisible(hwnd):
+                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                    if int(pid) == int(self.pid):
+                        top_hwnds.append(hwnd)
             except Exception:
                 pass
+            return True
 
-        if dialog_hwnd <= 0:
-            logger.warning("无法获取查询窗口句柄")
-            return False
+        win32gui.EnumWindows(enum_top, 0)
+        logger.info("进程顶层窗口: %s",
+                     [(h, win32gui.GetWindowText(h)[:50]) for h in top_hwnds])
 
-        logger.info("查询窗口句柄: %d", dialog_hwnd)
-
-        # 在查询窗口下递归查找 SysDateTimePick32 控件
+        # 在所有顶层窗口下搜索 SysDateTimePick32
         dtp_hwnds: list[int] = []
-        self._find_dtp_hwnds(dialog_hwnd, dtp_hwnds)
-        logger.info("找到 %d 个 DateTimePicker 控件 (hwnds: %s)", len(dtp_hwnds), dtp_hwnds)
+        for top_hwnd in top_hwnds:
+            self._find_dtp_hwnds(top_hwnd, dtp_hwnds)
+
+        logger.info("找到 %d 个 DateTimePicker (hwnds: %s)", len(dtp_hwnds), dtp_hwnds)
 
         if len(dtp_hwnds) < 2:
-            logger.warning("DateTimePicker 数量不足 (%d < 2)", len(dtp_hwnds))
+            # 输出所有控件类名帮助诊断
+            all_classes: set[str] = set()
+            for top_hwnd in top_hwnds:
+                self._collect_child_classes(top_hwnd, all_classes)
+            logger.warning("DateTimePicker 不足 (%d < 2), 进程内所有控件类名: %s",
+                           len(dtp_hwnds), sorted(all_classes))
             return False
 
         # 取最后两个：如果有"快速指定查询月份"也是 DateTimePicker，它排在最前面
