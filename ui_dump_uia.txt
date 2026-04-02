@@ -1,0 +1,4 @@
+--- Window:  ---
+Error printing identifiers: 'UIAWrapper' object has no attribute 'print_control_identifiers'
+--- Window: 先达考勤管理系统（当前版本：1.3.4.8） ---
+Error printing identifiers: 'UIAWrapper' object has no attribute 'print_control_identifiers'

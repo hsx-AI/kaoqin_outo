@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+import calendar
 import ctypes
 import logging
 import subprocess
 import time
+from datetime import datetime
 from pathlib import Path
 
 import win32com.client
@@ -543,6 +545,61 @@ class ClientAutomation:
         self._dump_debug_info("uia", "ui_dump_uia.txt")
         return False
 
+    # ── 日期填写 ──────────────────────────────────────────────────────────
+
+    def _fill_query_dates(self, query_dialog) -> bool:
+        """在查询窗口中填入本月的起始和结束日期（如 2026-04-01 至 2026-04-30）"""
+        now = datetime.now()
+        year, month = now.year, now.month
+        _, last_day = calendar.monthrange(year, month)
+        start_date_str = f"{year:04d}-{month:02d}-01"
+        end_date_str = f"{year:04d}-{month:02d}-{last_day:02d}"
+
+        logger.info("设置查询日期范围: %s 至 %s", start_date_str, end_date_str)
+
+        try:
+            date_controls = []
+            for child in query_dialog.descendants():
+                try:
+                    text = child.window_text().strip()
+                    if re.match(r'\d{4}-\d{2}-\d{2}', text):
+                        date_controls.append(child)
+                        continue
+                    class_name = getattr(child.element_info, 'class_name', '') or ''
+                    if 'DateTimePick' in class_name and child not in date_controls:
+                        date_controls.append(child)
+                except Exception:
+                    continue
+
+            if len(date_controls) < 2:
+                logger.warning("未找到足够的日期控件(找到%d个)", len(date_controls))
+                return False
+
+            logger.info("找到 %d 个日期控件, 开始填入日期", len(date_controls))
+            shell = win32com.client.Dispatch("WScript.Shell")
+
+            for ctrl, date_str in [(date_controls[0], start_date_str),
+                                    (date_controls[1], end_date_str)]:
+                ctrl.click_input()
+                time.sleep(0.3)
+                parts = date_str.split("-")
+                shell.SendKeys("{HOME}")
+                time.sleep(0.1)
+                for i, part in enumerate(parts):
+                    shell.SendKeys(part)
+                    time.sleep(0.2)
+                    if i < len(parts) - 1:
+                        shell.SendKeys("{RIGHT}")
+                        time.sleep(0.1)
+                time.sleep(0.3)
+
+            logger.info("日期填入完成")
+            return True
+
+        except Exception as e:
+            logger.warning("填入日期失败: %s", e)
+            return False
+
     # ── 查询导出（带全局超时 + 响应性检测）────────────────────────────────
 
     def perform_query_and_export(self, timeout_seconds: float = 300.0) -> bool:
@@ -599,6 +656,14 @@ class ClientAutomation:
             if query_dialog:
                 try:
                     query_dialog.set_focus()
+                    time.sleep(0.5)
+
+                    if self._fill_query_dates(query_dialog):
+                        logger.info("日期设置成功，准备点击确定")
+                    else:
+                        logger.warning("日期设置失败，将使用窗口默认日期继续")
+
+                    time.sleep(0.5)
                     confirm_btn = query_dialog.descendants(title="确定", control_type="Button")
                     if confirm_btn:
                         confirm_btn[0].click_input()
