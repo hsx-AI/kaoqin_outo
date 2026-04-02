@@ -553,7 +553,7 @@ class ClientAutomation:
         while child:
             try:
                 cls = win32gui.GetClassName(child)
-                if cls == "SysDateTimePick32":
+                if "SysDateTimePick32" in cls:
                     result.append(child)
                 else:
                     self._find_dtp_hwnds(child, result)
