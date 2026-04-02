@@ -547,6 +547,23 @@ class ClientAutomation:
 
     # ── 日期填写 ──────────────────────────────────────────────────────────
 
+    def _find_dtp_hwnds(self, parent_hwnd: int, result: list) -> None:
+        """用 win32gui 递归查找 parent_hwnd 下所有 SysDateTimePick32 子窗口"""
+        child = win32gui.FindWindowEx(parent_hwnd, 0, None, None)
+        while child:
+            try:
+                cls = win32gui.GetClassName(child)
+                if cls == "SysDateTimePick32":
+                    result.append(child)
+                else:
+                    self._find_dtp_hwnds(child, result)
+            except Exception:
+                pass
+            try:
+                child = win32gui.FindWindowEx(parent_hwnd, child, None, None)
+            except Exception:
+                break
+
     def _fill_query_dates(self, query_dialog) -> bool:
         """在查询窗口中填入本月的起始和结束日期（如 2026-04-01 至 2026-04-30）"""
         now = datetime.now()
@@ -556,102 +573,55 @@ class ClientAutomation:
         logger.info("设置查询日期范围: %d-%02d-01 至 %d-%02d-%02d",
                      year, month, year, month, last_day)
 
-        # 方法1: 通过 Win32 API (DTM_SETSYSTEMTIME) 直接设置 DateTimePicker
+        # 从 UIA 对象直接获取查询窗口句柄（避免按标题搜索误匹配主窗口）
+        dialog_hwnd = 0
         try:
-            app_win32 = Application(backend="win32").connect(process=self.pid)
-            dialog_win32 = None
-            for w in app_win32.windows():
-                try:
-                    if "查询" in w.window_text():
-                        dialog_win32 = w
-                        break
-                except Exception:
-                    continue
-
-            if dialog_win32 is not None:
-                dtp_list = self._find_date_pickers_win32(dialog_win32)
-                logger.info("Win32 方式找到 %d 个 DateTimePicker 控件", len(dtp_list))
-
-                if len(dtp_list) >= 2:
-                    dtp_list[0].set_time(year=year, month=month, day=1)
-                    logger.info("设置开始日期: %d-%02d-01", year, month)
-                    time.sleep(0.3)
-
-                    dtp_list[1].set_time(year=year, month=month, day=last_day)
-                    logger.info("设置结束日期: %d-%02d-%02d", year, month, last_day)
-                    time.sleep(0.3)
-                    logger.info("日期填入完成 (Win32 API)")
-                    return True
-            else:
-                logger.warning("Win32 backend 未找到查询窗口")
-        except Exception as e:
-            logger.warning("Win32 API 设置日期失败: %s", e)
-
-        # 方法2: 键盘输入 (降级方案)
-        logger.info("降级为键盘输入方式...")
-        return self._fill_dates_via_keyboard(
-            query_dialog,
-            f"{year:04d}-{month:02d}-01",
-            f"{year:04d}-{month:02d}-{last_day:02d}",
-        )
-
-    def _find_date_pickers_win32(self, parent) -> list:
-        """在 win32 窗口中递归查找 SysDateTimePick32 控件"""
-        result = []
-        try:
-            for ctrl in parent.children():
-                try:
-                    if ctrl.class_name() == "SysDateTimePick32":
-                        result.append(ctrl)
-                    else:
-                        result.extend(self._find_date_pickers_win32(ctrl))
-                except Exception:
-                    continue
+            dialog_hwnd = int(getattr(query_dialog, 'handle', 0) or 0)
         except Exception:
             pass
-        return result
+        if dialog_hwnd <= 0:
+            try:
+                dialog_hwnd = int(getattr(query_dialog.element_info, 'handle', 0) or 0)
+            except Exception:
+                pass
 
-    def _fill_dates_via_keyboard(self, query_dialog, start_str: str, end_str: str) -> bool:
-        """通过键盘模拟输入日期（降级方案）"""
+        if dialog_hwnd <= 0:
+            logger.warning("无法获取查询窗口句柄")
+            return False
+
+        logger.info("查询窗口句柄: %d", dialog_hwnd)
+
+        # 在查询窗口下递归查找 SysDateTimePick32 控件
+        dtp_hwnds: list[int] = []
+        self._find_dtp_hwnds(dialog_hwnd, dtp_hwnds)
+        logger.info("找到 %d 个 DateTimePicker 控件 (hwnds: %s)", len(dtp_hwnds), dtp_hwnds)
+
+        if len(dtp_hwnds) < 2:
+            logger.warning("DateTimePicker 数量不足 (%d < 2)", len(dtp_hwnds))
+            return False
+
+        # 取最后两个：如果有"快速指定查询月份"也是 DateTimePicker，它排在最前面
+        start_hwnd = dtp_hwnds[-2]
+        end_hwnd = dtp_hwnds[-1]
+
         try:
-            date_controls = []
-            for child in query_dialog.descendants():
-                try:
-                    text = child.window_text().strip()
-                    if re.match(r'\d{4}-\d{2}-\d{2}', text):
-                        date_controls.append(child)
-                        continue
-                    class_name = getattr(child.element_info, 'class_name', '') or ''
-                    if 'DateTimePick' in class_name and child not in date_controls:
-                        date_controls.append(child)
-                except Exception:
-                    continue
+            from pywinauto.controls.common_controls import DateTimePickerWrapper
+            from pywinauto.win32_element_info import HwndElementInfo
 
-            if len(date_controls) < 2:
-                logger.warning("键盘方式找到 %d 个日期控件 (需要2个)", len(date_controls))
-                return False
+            start_dtp = DateTimePickerWrapper(HwndElementInfo(start_hwnd))
+            start_dtp.set_time(year=year, month=month, day=1)
+            logger.info("设置开始日期: %d-%02d-01 (hwnd=%d)", year, month, start_hwnd)
+            time.sleep(0.3)
 
-            shell = win32com.client.Dispatch("WScript.Shell")
+            end_dtp = DateTimePickerWrapper(HwndElementInfo(end_hwnd))
+            end_dtp.set_time(year=year, month=month, day=last_day)
+            logger.info("设置结束日期: %d-%02d-%02d (hwnd=%d)", year, month, last_day, end_hwnd)
+            time.sleep(0.3)
 
-            for ctrl, date_str in [(date_controls[0], start_str),
-                                    (date_controls[1], end_str)]:
-                ctrl.click_input()
-                time.sleep(0.3)
-                parts = date_str.split("-")
-                shell.SendKeys("{HOME}")
-                time.sleep(0.1)
-                for i, part in enumerate(parts):
-                    shell.SendKeys(part)
-                    time.sleep(0.2)
-                    if i < len(parts) - 1:
-                        shell.SendKeys("{RIGHT}")
-                        time.sleep(0.1)
-                time.sleep(0.3)
-
-            logger.info("日期填入完成 (键盘方式)")
+            logger.info("日期填入完成 (Win32 DTM_SETSYSTEMTIME)")
             return True
         except Exception as e:
-            logger.warning("键盘方式设置日期失败: %s", e)
+            logger.error("DTM_SETSYSTEMTIME 设置日期失败: %s", e)
             return False
 
     # ── 查询导出（带全局超时 + 响应性检测）────────────────────────────────
