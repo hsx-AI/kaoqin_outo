@@ -552,11 +552,67 @@ class ClientAutomation:
         now = datetime.now()
         year, month = now.year, now.month
         _, last_day = calendar.monthrange(year, month)
-        start_date_str = f"{year:04d}-{month:02d}-01"
-        end_date_str = f"{year:04d}-{month:02d}-{last_day:02d}"
 
-        logger.info("设置查询日期范围: %s 至 %s", start_date_str, end_date_str)
+        logger.info("设置查询日期范围: %d-%02d-01 至 %d-%02d-%02d",
+                     year, month, year, month, last_day)
 
+        # 方法1: 通过 Win32 API (DTM_SETSYSTEMTIME) 直接设置 DateTimePicker
+        try:
+            app_win32 = Application(backend="win32").connect(process=self.pid)
+            dialog_win32 = None
+            for w in app_win32.windows():
+                try:
+                    if "查询" in w.window_text():
+                        dialog_win32 = w
+                        break
+                except Exception:
+                    continue
+
+            if dialog_win32 is not None:
+                dtp_list = self._find_date_pickers_win32(dialog_win32)
+                logger.info("Win32 方式找到 %d 个 DateTimePicker 控件", len(dtp_list))
+
+                if len(dtp_list) >= 2:
+                    dtp_list[0].set_time(year=year, month=month, day=1)
+                    logger.info("设置开始日期: %d-%02d-01", year, month)
+                    time.sleep(0.3)
+
+                    dtp_list[1].set_time(year=year, month=month, day=last_day)
+                    logger.info("设置结束日期: %d-%02d-%02d", year, month, last_day)
+                    time.sleep(0.3)
+                    logger.info("日期填入完成 (Win32 API)")
+                    return True
+            else:
+                logger.warning("Win32 backend 未找到查询窗口")
+        except Exception as e:
+            logger.warning("Win32 API 设置日期失败: %s", e)
+
+        # 方法2: 键盘输入 (降级方案)
+        logger.info("降级为键盘输入方式...")
+        return self._fill_dates_via_keyboard(
+            query_dialog,
+            f"{year:04d}-{month:02d}-01",
+            f"{year:04d}-{month:02d}-{last_day:02d}",
+        )
+
+    def _find_date_pickers_win32(self, parent) -> list:
+        """在 win32 窗口中递归查找 SysDateTimePick32 控件"""
+        result = []
+        try:
+            for ctrl in parent.children():
+                try:
+                    if ctrl.class_name() == "SysDateTimePick32":
+                        result.append(ctrl)
+                    else:
+                        result.extend(self._find_date_pickers_win32(ctrl))
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return result
+
+    def _fill_dates_via_keyboard(self, query_dialog, start_str: str, end_str: str) -> bool:
+        """通过键盘模拟输入日期（降级方案）"""
         try:
             date_controls = []
             for child in query_dialog.descendants():
@@ -572,14 +628,13 @@ class ClientAutomation:
                     continue
 
             if len(date_controls) < 2:
-                logger.warning("未找到足够的日期控件(找到%d个)", len(date_controls))
+                logger.warning("键盘方式找到 %d 个日期控件 (需要2个)", len(date_controls))
                 return False
 
-            logger.info("找到 %d 个日期控件, 开始填入日期", len(date_controls))
             shell = win32com.client.Dispatch("WScript.Shell")
 
-            for ctrl, date_str in [(date_controls[0], start_date_str),
-                                    (date_controls[1], end_date_str)]:
+            for ctrl, date_str in [(date_controls[0], start_str),
+                                    (date_controls[1], end_str)]:
                 ctrl.click_input()
                 time.sleep(0.3)
                 parts = date_str.split("-")
@@ -593,11 +648,10 @@ class ClientAutomation:
                         time.sleep(0.1)
                 time.sleep(0.3)
 
-            logger.info("日期填入完成")
+            logger.info("日期填入完成 (键盘方式)")
             return True
-
         except Exception as e:
-            logger.warning("填入日期失败: %s", e)
+            logger.warning("键盘方式设置日期失败: %s", e)
             return False
 
     # ── 查询导出（带全局超时 + 响应性检测）────────────────────────────────
